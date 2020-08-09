@@ -1,0 +1,70 @@
+public class EnemyController : MonoBehaviour
+{
+    public float lookRadius = 35f;
+    Transform target;
+    NavMeshAgent agent;
+    CharacterCombat combat;
+
+    //Animator Titan;//Anim
+    //public bool isLook = false;//Anim
+    //public bool isClose = false;//Anim
+
+    void Start()
+    {
+        target = PlayerManager.instance.player.transform;
+        agent = GetComponent<NavMeshAgent>();
+        combat = GetComponent<CharacterCombat>();
+
+        //Titan = GetComponent<Animator>();//Anim
+        
+
+    }
+
+    void Update()
+    {
+        float distance = Vector3.Distance(target.position, transform.position);
+
+        if (distance <= lookRadius)
+        {
+            //isLook = true;//Anim
+
+            agent.SetDestination(target.position);
+
+            if (distance <= agent.stoppingDistance)
+            {
+                CharacterStats targetStats =  target.GetComponent<CharacterStats>();
+                
+                //isLook = false;//Anim
+
+                if (targetStats != null)
+                {
+                    //isClose = true;//Anim
+
+                    combat.Attack(targetStats);
+                }
+                    FaceTarget();
+            }
+        }
+
+        /*if (distance >= lookRadius)//Anim
+        {
+            isClose = false;//Anim
+            isLook = false;//Anim
+        }
+        Titan.SetBool("isLook", isLook);//Anim
+        Titan.SetBool("isClose", isClose);//Anim*/
+    }
+
+    void FaceTarget()
+    {
+        Vector3 direction = (target.position - transform.position).normalized;
+        Quaternion lookRotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
+        transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 5f);
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, lookRadius);
+    }
+}
