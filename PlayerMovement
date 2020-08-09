@@ -1,0 +1,137 @@
+public class PlayerMovement : MonoBehaviour
+{
+    public Interactable focus;
+    
+    public float walkSpeed = 2;
+    public float runSpeed = 6;
+    public float gravity = -12;
+
+    public float turnSmoothTime = 0.2f;
+    float turnSmoothVelocity;
+
+    public float speedSmoothTime = 0.1f;
+    float speedSmoothVelocity;
+    float currentSpeed;
+    float velocityY;
+
+    public bool atk1Stop = false;//asd
+    public bool atk2Stop = false;//asd
+
+    Animator animator;
+    Transform cameraT;
+    CharacterController controller;
+
+    void Start()
+    {
+        animator = GetComponent<Animator>();
+        cameraT = Camera.main.transform;
+        controller = GetComponent<CharacterController>();
+    }
+
+    void Update()
+    {
+        Vector2 input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+        Vector2 inputDir = input.normalized;
+
+        if (inputDir != Vector2.zero)
+        {
+            float targetRotation = Mathf.Atan2(inputDir.x, inputDir.y) * Mathf.Rad2Deg + cameraT.eulerAngles.y;
+            transform.eulerAngles = Vector3.up * Mathf.SmoothDampAngle(transform.eulerAngles.y, targetRotation, ref turnSmoothVelocity, turnSmoothTime);
+        }
+
+        bool running = Input.GetKey(KeyCode.LeftShift);
+        float targetSpeed = ((running) ? runSpeed : walkSpeed) * inputDir.magnitude;
+        currentSpeed = Mathf.SmoothDamp(currentSpeed, targetSpeed, ref speedSmoothVelocity, speedSmoothTime);
+
+        velocityY += Time.deltaTime * gravity;
+
+        Vector3 velocity = transform.forward * currentSpeed + Vector3.up * velocityY;
+
+        controller.Move(velocity * Time.deltaTime);
+        currentSpeed = new Vector2(controller.velocity.x, controller.velocity.z).magnitude;
+
+        if (controller.isGrounded)
+        {
+            velocityY = 0;
+        }
+
+        float animationSpeedPercent = ((running) ? currentSpeed / runSpeed : currentSpeed / walkSpeed * .5f);
+        animator.SetFloat("speedPercent", animationSpeedPercent, speedSmoothTime, Time.deltaTime);
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+
+            if (Physics.Raycast(ray, out hit, 100.0f))
+            {
+                animator.SetTrigger("atk1");//asd
+                RemoveFocus();
+            }
+        }
+        
+        if (Input.GetMouseButtonDown(1))
+        {
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+
+            if (Physics.Raycast(ray, out hit, 100.0f))
+            {
+                Interactable interactable = hit.collider.GetComponent<Interactable>();
+                if (interactable != null)
+                {
+                    animator.SetTrigger("atk2");//asd
+                    SetFocus(interactable);
+                }
+            }
+        }
+
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            animator.SetTrigger("atk1");//asd
+            atk1Stop = false;
+        }
+        else if (Input.GetMouseButtonUp(0))
+        {
+            animator.ResetTrigger("atk1");//asd
+            atk1Stop = true;
+        }
+
+        if (Input.GetMouseButtonDown(1))
+        {
+            animator.SetTrigger("atk2");//asd
+            atk2Stop = false;
+        }
+        else if (Input.GetMouseButtonUp(1))
+        {
+            animator.ResetTrigger("atk2");//asd
+            atk2Stop = true;
+        }
+
+        animator.SetBool("atk1Stop", atk1Stop);
+        animator.SetBool("atk2Stop", atk2Stop);
+    }
+
+    void SetFocus(Interactable newFocus)
+    {
+        if (newFocus != focus)
+        {
+            if (focus != null)
+            {
+                focus.OnDefocused();
+            }
+            focus = newFocus;
+        }
+        newFocus.OnFocused(transform);
+    }
+
+    void RemoveFocus()
+    {
+        if (focus != null)
+        {
+            focus.OnDefocused();
+        }
+        focus = null;
+    }
+}
